@@ -1,0 +1,46 @@
+name: Network Lab Test Automation CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Start the network lab (docker compose)
+        run: docker compose up -d
+
+      - name: Wait for containers to finish provisioning
+        run: sleep 10
+
+      - name: Run test suite
+        run: |
+          pytest --html=logs/report.html --self-contained-html
+
+      - name: Upload defect log and HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            logs/defects.json
+            logs/report.html
+
+      - name: Tear down the network lab
+        if: always()
+        run: docker compose down -v
